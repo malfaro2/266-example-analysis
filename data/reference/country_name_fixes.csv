@@ -1,0 +1,12 @@
+gapminder_name,iso3,note
+"Congo, Dem. Rep.",COD,OWID: Democratic Republic of Congo
+"Congo, Rep.",COG,OWID: Congo
+Czech Republic,CZE,OWID: Czechia
+"Hong Kong, China",HKG,OWID: Hong Kong
+"Korea, Dem. Rep.",PRK,OWID: North Korea
+"Korea, Rep.",KOR,OWID: South Korea
+Puerto Rico,PRI,not in the OWID CO2 file
+Slovak Republic,SVK,OWID: Slovakia
+Swaziland,SWZ,OWID: Eswatini (renamed 2018)
+West Bank and Gaza,PSE,OWID: Palestine
+"Yemen, Rep.",YEM,OWID: Yemen

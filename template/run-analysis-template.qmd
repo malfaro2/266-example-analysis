@@ -1,0 +1,117 @@
+---
+# Copy this file to the top folder of YOUR project as run-analysis.qmd,
+# then replace everything in <angle brackets>. Delete these comment lines.
+title: "How to run this analysis"
+subtitle: "<your question, in one line>"
+author: "<your name(s)>"
+date: today
+format:
+  html:
+    toc: true
+    number-sections: true
+    embed-resources: true
+    code-tools: true
+execute:
+  echo: true
+  warning: false
+---
+
+# The project at a glance
+
+**Question.** <one or two sentences>
+
+**Data.**
+
+| File in `data/raw/` | Source (link) | Format | License / terms |
+|---|---|---|---|
+| `<file>` | <where it came from> | <long/wide, csv/tsv/...> | <license> |
+
+**Folders.**
+
+```
+<your-project>/
+├── run-analysis.qmd   <- render this to run everything
+├── README.md          <- points here
+├── data/raw/          <- never edited
+├── data/processed/    <- written by the pipeline
+├── R/                 <- one script per step
+└── output/            <- figures and tables
+```
+
+# Before you render (one time only)
+
+1. Open this folder in Positron (*File → Open Folder*).
+2. Install the exact package versions:
+
+```{r}
+#| label: restore
+#| eval: false
+renv::restore()
+```
+
+<Anything else a classmate needs to know before rendering: a large file to download? an account?>
+
+# Step 0: setup
+
+```{r}
+#| label: setup
+source("R/functions.R")   # delete this line if you have no shared functions
+```
+
+# Step 1: import
+
+```{r}
+#| label: import
+source("R/01-import.R")
+```
+
+<What the raw files look like, with inline code: "The survey has `r nrow(survey_raw)` rows.">
+
+# Step 2: clean
+
+```{r}
+#| label: clean
+source("R/02-clean.R")
+```
+
+<What you changed and why. Which rows did you drop, and how many? Report the number with inline code.>
+
+# Step 3: <reshape / join / model ...>
+
+```{r}
+#| label: step-3
+source("R/03-<name>.R")
+```
+
+<Row counts before and after every join or filter.>
+
+# Step 4: results
+
+```{r}
+#| label: fig-main
+#| fig-cap: "<what the figure shows, in one sentence>"
+<the plot object made by your script>
+```
+
+@fig-main shows <...>.
+
+# How to render, and how to check it is reproducible
+
+```bash
+quarto render run-analysis.qmd
+```
+
+Delete `data/processed/` and `output/` contents, restart R, and render again: everything comes back.
+
+# Computational environment
+
+```{r}
+#| label: session-info
+sessionInfo()
+```
+
+# AI use
+
+- **Tools used:**
+- **What I used them for:**
+- **What I changed or rejected, and how I checked it:**

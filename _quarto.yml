@@ -1,0 +1,7 @@
+project:
+  type: default
+  render:
+    - run-analysis.qmd
+  # Run every code chunk from the project folder, so relative paths
+  # like "data/raw/gapminder.tsv" work no matter where the .qmd lives.
+  execute-dir: project

@@ -1,0 +1,306 @@
+---
+title: "How to run this analysis"
+subtitle: "Life expectancy, fertility, and CO₂ by world region, 1952-2007"
+author: "STAT 266A example project"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    embed-resources: true
+    code-tools: true
+execute:
+  echo: true
+  warning: false
+---
+
+::: {.callout-note}
+## Read this file twice
+
+This document does two jobs at once:
+
+1. **It is the project's instructions.** Rendering it runs the whole analysis, from the raw data to the final figures, in order. If it renders, the project is reproducible.
+2. **It is a Quarto tutorial.** Every section introduces the Quarto feature that step needs, in a box like this one.
+
+Open `run-analysis.qmd` (the source) in Positron next to `run-analysis.html` (the rendered output). Everything you see in the HTML was written in the source. The **</> Code** button at the top right of the HTML shows the source too.
+:::
+
+# The project at a glance
+
+**Question.** How did life expectancy, fertility, and CO₂ emissions per person change across world regions between 1952 and 2007, and how do they relate to each other?
+
+**Data.** Four public files, combined into one table with one row per country and year:
+
+| File in `data/raw/` | Source | Format | License |
+|---|---|---|---|
+| `gapminder.tsv` | [Gapminder](https://www.gapminder.org/data/), via the [`gapminder` R package](https://github.com/jennybc/gapminder) | long, tab-separated | CC BY |
+| `wb_fertility_wide.csv` | [World Bank WDI](https://data.worldbank.org/indicator/SP.DYN.TFRT.IN), indicator `SP.DYN.TFRT.IN` | **wide**, one column per year | CC BY 4.0 |
+| `wb_country_metadata.csv` | Same World Bank download | lookup table: region, income group | CC BY 4.0 |
+| `owid_co2_per_capita.csv` | [Our World in Data](https://ourworldindata.org/grapher/co-emissions-per-capita), from the Global Carbon Budget | long | CC BY 4.0 |
+
+More detail on each file is in `data/README.md`.
+
+**Folders.** Every file has one job:
+
+```
+266A-example-analysis/
+├── run-analysis.qmd        <- this file: render it to run everything
+├── README.md               <- points here
+├── data/
+│   ├── raw/                <- downloaded files, never edited
+│   ├── reference/          <- small hand-written lookup tables
+│   └── processed/          <- written by the pipeline (not in git)
+├── R/                      <- one script per step, plus functions.R
+├── python/                 <- the Python step
+├── output/
+│   ├── figures/            <- written by the pipeline (not in git)
+│   └── tables/
+├── renv.lock               <- exact R package versions
+├── AGENTS.md               <- rules for AI assistants working in this repo
+└── STYLE.md                <- code style for humans and AI
+```
+
+::: {.callout-tip}
+## Quarto: the YAML header
+
+The block between the two `---` lines at the very top of the source is the **YAML header**. It sets options for the whole document:
+
+- `title`, `subtitle`, `author`, `date: today`: the title block you see above.
+- `format: html:` and its options: `toc` (table of contents), `number-sections`, `embed-resources: true` (one self-contained `.html` file you can email), `code-tools` (the **</> Code** button).
+- `execute:` sets defaults for **every** code chunk. `echo: true` shows the code; `warning: false` hides warnings **and messages** from packages (so helper functions here print with `cat()` instead).
+
+Indentation matters in YAML: two spaces per level, never tabs.
+:::
+
+# Before you render (one time only)
+
+You need R, [Quarto](https://quarto.org/docs/get-started/), and Positron. You do **not** need to install Python yourself (see @sec-python).
+
+1. **Get the project.** Clone the repository, then in Positron use *File → Open Folder* and choose `266A-example-analysis`. Opening the folder makes it the working directory, so every path in this project can be relative.
+
+2. **Install the exact package versions.** This project uses [`renv`](https://rstudio.github.io/renv/). When you open the folder, `renv` starts automatically (via `.Rprofile`). In the R console, run:
+
+```{r}
+#| label: restore
+#| eval: false
+renv::restore()
+```
+
+This reads `renv.lock` and installs the same versions of every package that were used to produce these results, in a library that belongs to this project only.
+
+::: {.callout-tip}
+## Quarto: code chunks and chunk options
+
+A code chunk starts with ```` ```{r} ```` and ends with ```` ``` ````. Lines at the top that start with `#|` are **chunk options**:
+
+- `label: restore` names the chunk. Labels show up in error messages, so you know where a render failed.
+- `eval: false` shows the code **without running it**. We want you to run `renv::restore()` yourself, once, not every time the document renders.
+
+Other options you will see below: `include: false` (run it but show nothing), `echo: false` (show the output, hide the code), and `fig-cap` (a figure caption).
+:::
+
+# Step 0: setup
+
+```{r}
+#| label: setup
+source("R/functions.R")
+```
+
+This loads the helper functions every step uses: `check_unique_key()` stops the render if a table has duplicated keys, and `report_rows()` prints row counts so changes are visible.
+
+::: {.callout-tip}
+## Quarto: everything runs in order, in a fresh session
+
+When you render, Quarto starts a **new R session** and runs every chunk from top to bottom. Nothing from your console exists there: a data frame you created by hand, a package you loaded interactively, a variable you changed. If the analysis needs it, a chunk must create it.
+
+This is what makes the document a test of reproducibility. *"It works on my machine"* is not enough; it has to work in a fresh session.
+:::
+
+# Step 1: import
+
+```{r}
+#| label: import
+source("R/01-import.R")
+```
+
+This reads the four raw files in `data/raw/` without changing them (see the comments in `R/01-import.R` for what each `read_*()` option is for). The Gapminder file has `r nrow(gapminder_raw)` rows covering `r length(unique(gapminder_raw$country))` countries; the World Bank file has `r nrow(fertility_raw)` rows, because it mixes countries with groups of countries such as "World".
+
+::: {.callout-tip}
+## Quarto: inline code
+
+The numbers in the paragraph above were not typed. In the source they are written as `` `r knitr::inline_expr("nrow(gapminder_raw)")` ``, which runs when you render and inserts the result into the text. If the data change, the sentence changes with them. Use inline code for every number you report in a sentence.
+:::
+
+A quick look at the wide World Bank table, which is the one that needs reshaping:
+
+```{r}
+#| label: peek-wide
+fertility_raw[1:3, 1:8]
+```
+
+# Step 2: clean
+
+```{r}
+#| label: clean
+source("R/02-clean.R")
+```
+
+The main job here is to give every country the **same key** in every table. Gapminder identifies countries by name, the other files by ISO3 code (`"MEX"`, `"KEN"`, ...). We take each name's code from the OWID file. Eleven Gapminder names are spelled differently there, so they get their codes from a small hand-written table, @tbl-fixes.
+
+```{r}
+#| label: tbl-fixes
+#| tbl-cap: "Gapminder country names that do not match the OWID file, from data/reference/country_name_fixes.csv."
+knitr::kable(name_fixes)
+```
+
+::: {.callout-tip}
+## Quarto: tables and cross-references
+
+The chunk above has `label: tbl-fixes` and a `tbl-cap`. Because the label starts with `tbl-`, Quarto numbers the table and lets you refer to it as `@tbl-fixes` in the text, which becomes the clickable "Table 1" you saw. Figures work the same way with the `fig-` prefix, and sections with `{#sec-...}`.
+
+Why a CSV and not code? The lookup is *data*. Keeping it in `data/reference/` means fixing a new mismatch is a one-line edit that anyone can review.
+:::
+
+::: {.callout-warning}
+## A step that stops the render on purpose
+
+`R/02-clean.R` contains `stopifnot(!any(is.na(gapminder$iso3)))`. If a country name ever fails to match, the render **stops with an error** instead of quietly dropping that country. A render that fails loudly is better than a report that is quietly wrong.
+:::
+
+# Step 3: reshape and join
+
+```{r}
+#| label: reshape-join
+source("R/03-reshape-join.R")
+```
+
+The World Bank file is reshaped from wide (one column per year) to long (one row per country-year) with `pivot_longer()`, then the four sources are joined on `iso3` and `year`. Gapminder decides which rows we keep; the others only add columns.
+
+The final analysis table has `r nrow(analysis)` rows, `r length(unique(analysis$country))` countries, and covers `r min(analysis$year)` to `r max(analysis$year)`. It is saved as `data/processed/analysis.csv`.
+
+```{r}
+#| label: peek-analysis
+head(analysis)
+```
+
+# Step 4: a Python step {#sec-python}
+
+```{r}
+#| label: python-setup
+#| message: false
+library(reticulate)
+py_require("pandas>=2.2")
+```
+
+The next chunk is **Python**, not R. It receives the R data frame `analysis`, computes the correlation between fertility and life expectancy within each region, and hands the result back to R.
+
+```{python}
+#| label: py-correlations
+import sys
+sys.path.insert(0, "python")
+from summarize import regionCorrelations
+
+correlations = regionCorrelations(r.analysis, 2007)
+correlations
+```
+
+Back in R, the Python result is available as `py$correlations`:
+
+```{r}
+#| label: tbl-correlations
+#| tbl-cap: "Correlation between fertility and life expectancy across countries within each region, 2007 (computed in Python)."
+knitr::kable(py$correlations, digits = 2, row.names = FALSE)
+```
+
+In most regions, countries with higher fertility have lower life expectancy (@tbl-correlations). Europe & Central Asia is the exception: fertility there is low almost everywhere, so it says little about life expectancy. Read the `n_countries` column too: a correlation of −1 from two North American countries means nothing.
+
+::: {.callout-tip}
+## Quarto: mixing R and Python in one document
+
+- A chunk that starts with ```` ```{python} ```` runs Python. Because this document also has R chunks, Quarto uses the **knitr** engine and runs the Python chunks through the R package **reticulate**. Both languages share one session.
+- **R → Python:** inside a Python chunk, `r.analysis` is the R object `analysis`, converted to a pandas DataFrame.
+- **Python → R:** inside an R chunk, `py$correlations` is the Python object `correlations`, converted to an R data frame.
+- `py_require("pandas>=2.2")` declares which Python packages this document needs. The first time you render, reticulate downloads Python and pandas into a cache, so nobody has to install Python by hand. (You need an internet connection the first time.)
+- Longer Python code lives in `python/summarize.py`, just as longer R code lives in `R/`. The chunk only imports it and calls it.
+:::
+
+# Step 5: describe
+
+```{r}
+#| label: describe
+source("R/04-describe.R")
+```
+
+This writes a summary table to `output/tables/region_summary.csv` and two figures to `output/figures/`.
+
+```{r}
+#| label: fig-scatter
+#| fig-cap: "Fertility and life expectancy in 2007. Each point is a country; size is population."
+#| fig-width: 8
+#| fig-height: 5
+fig_scatter
+```
+
+```{r}
+#| label: fig-trends
+#| fig-cap: "Median of each variable across the countries in each World Bank region."
+#| fig-width: 8
+#| fig-height: 8
+fig_trends
+```
+
+@fig-scatter shows a strong negative relationship in 2007: where women have fewer children, people live longer. @fig-trends shows that the median fertility fell and the median life expectancy rose in every region. CO₂ per person rose everywhere too, but stayed far higher in North America and Europe than in South Asia and Sub-Saharan Africa. These are descriptions, not causes: all three variables move with income and time.
+
+::: {.callout-tip}
+## Quarto: figures
+
+A chunk whose label starts with `fig-` and has a `fig-cap` becomes a numbered figure you can cite with `@fig-scatter`. `fig-width` and `fig-height` (in inches) control its size. The same figures are also saved as PNG files by `R/04-describe.R`, so you can use them in slides without re-running anything.
+:::
+
+# How to render, and how to check it is reproducible
+
+**Render** in one of two ways:
+
+- In Positron: open `run-analysis.qmd` and click **Preview** (or press `Ctrl/Cmd + Shift + K`).
+- In the terminal, from the project folder:
+
+```bash
+quarto render run-analysis.qmd
+```
+
+**Check it is reproducible.** The real test is a fresh start:
+
+1. Delete everything the pipeline creates: the files in `data/processed/` and `output/` (keep the `.gitkeep` files).
+2. Restart R (*Session → Restart R*), so nothing is left in memory.
+3. Render again. Every file comes back, and the numbers in this document stay the same.
+
+The best test of all: clone the repository into a new folder (or a classmate's laptop) and render there.
+
+::: {.callout-tip}
+## Quarto: where code runs from
+
+Code chunks run with the **project folder** as the working directory (set in `_quarto.yml` with `execute-dir: project`). That is why every path in this project is relative, like `"data/raw/gapminder.tsv"`. A path like `"/Users/marce/Desktop/..."` works only on one laptop, and breaks the first time anyone else renders.
+
+For long analyses, Quarto can also skip chunks that have not changed (`freeze` and `cache` options). This project is small enough to re-run in full every time, which is the safest choice.
+:::
+
+# Computational environment
+
+What was used to produce this document. This is recorded automatically on every render.
+
+```{r}
+#| label: session-info
+sessionInfo()
+```
+
+```{r}
+#| label: python-info
+py_config()
+```
+
+# AI use
+
+- **Tools used:** Claude (Anthropic), through Claude Code.
+- **What it was used for:** drafting the folder structure, the R and Python scripts, and the text of this runbook, under the instructor's direction.
+- **What was changed or rejected, and how it was checked:** rendered from a fresh clone; row counts checked before and after every join; every sentence about the results checked against the tables (the first draft said the correlation was negative in *every* region, which @tbl-correlations shows is false). Reviewed by the instructor. Some of the code is *deliberately* imperfect: in Week 9 you review this repository with the class checklist and fix what you find.

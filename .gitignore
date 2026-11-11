@@ -1,0 +1,25 @@
+# Rendered output: rebuilt by `quarto render`
+run-analysis.html
+run-analysis_files/
+/.quarto/
+
+# Produced by the pipeline: rebuilt from data/raw/
+data/processed/*
+!data/processed/.gitkeep
+output/figures/*
+!output/figures/.gitkeep
+output/tables/*
+!output/tables/.gitkeep
+
+# R / Positron
+.Rhistory
+.RData
+.Rproj.user/
+
+# Python
+__pycache__/
+.venv/
+
+.DS_Store
+
+**/*.quarto_ipynb
