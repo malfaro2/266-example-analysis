@@ -1,7 +1,7 @@
 ---
-title: "How to run this analysis"
+title: "This is my first Quarto"
 subtitle: "Life expectancy, fertility, and CO₂ by world region, 1952-2007"
-author: "STAT 266A example project"
+author: "Marcela Alfaro Cordoba"
 date: today
 format:
   html:
